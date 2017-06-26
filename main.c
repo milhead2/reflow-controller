@@ -27,6 +27,8 @@
 
 /*local includes*/
 #include "assert.h"
+#include "display.h"
+
 
 // the three tiva LED'a are attached to GPIO
 // port F at pind 1, 2, 3
@@ -52,107 +54,6 @@ __error__(char *pcFilename, uint32_t ui32Line)
 }
 #endif
 
-
-#define LCD_D7 (1<<3)  // D3
-#define LCD_D6 (1<<2)  // D2
-#define LCD_D5 (1<<1)  // D1
-#define LCD_D4 (1<<1)  // E1
-#define LCD_E  (1<<2)  // E2
-#define LCD_RW (1<<4)  // E4
-#define LCD_RS (1<<5)  // E5
-
-#define LCD_STROBE {GPIO_PORTE_DATA_R |= LCD_E; GPIO_PORTE_DATA_R &= ~LCD_E; }
-
-#define SET_LCD_RS(x) ((x) ? (GPIO_PORTE_DATA_R |= LCD_RS) : (GPIO_PORTE_DATA_R &= ~(LCD_RS)))
-#define SET_LCD_RW(x) ((x) ? (GPIO_PORTE_DATA_R |= LCD_RW) : (GPIO_PORTE_DATA_R &= ~(LCD_RW)))
-
-#define SET_LCD_D4(x) ((x) ? (GPIO_PORTE_DATA_R |= LCD_D4) : (GPIO_PORTE_DATA_R &= ~(LCD_D4)))
-#define SET_LCD_D5(x) ((x) ? (GPIO_PORTD_DATA_R |= LCD_D5) : (GPIO_PORTD_DATA_R &= ~(LCD_D5)))
-#define SET_LCD_D6(x) ((x) ? (GPIO_PORTD_DATA_R |= LCD_D6) : (GPIO_PORTD_DATA_R &= ~(LCD_D6)))
-#define SET_LCD_D7(x) ((x) ? (GPIO_PORTD_DATA_R |= LCD_D7) : (GPIO_PORTD_DATA_R &= ~(LCD_D7)))
-
-#define SET_LCD_EN(x) ((x) ? (GPIO_PORTA_DATA_R |= LCD_E) : (GPIO_PORTA_DATA_R &= ~(LCD_E)))
-
-void SET_LCD_DATA(char val)
-{
-    // LSB --> D4 --> E1
-    SET_LCD_D4( val & (1<<0) );
-    // 1   --> D5 --> E1
-    SET_LCD_D5( val & (1<<1) );
-    // 2   --> D6 --> E1
-    SET_LCD_D6( val & (1<<2) );
-    // 3   --> D7 --> E1
-    SET_LCD_D7( val & (1<<3) );
-}
-
-void lcddata(char dataout)
-{
-    SET_LCD_DATA(dataout);
-    SET_LCD_RS(1);
-    //RA0 = 1 ;
-    SET_LCD_RW(0) ; //PORTA&=~(1<<rw);
-    LCD_STROBE ;
-}
-
-void lcdcmd(char cmdout)
-{
-    SET_LCD_EN(0) ;
-    SET_LCD_DATA(cmdout);
-    SET_LCD_RS(0) ; //PORTA&=~(1<<rs);
-    SET_LCD_RW(0) ; //PORTA&=~(1<<rw);
-    LCD_STROBE ;
-}
-
-
-void dis_cmd(char cmd_value)
-{
-    char cmd_value1;
-    cmd_value1 = ((cmd_value >> 4) & 0x0F) ; //mask lower nibble because RD0-RD3 pins are used. 
-    lcdcmd(cmd_value1); // send to LCD
-     
-    spinDelayUs(50) ;
-    cmd_value1 = (cmd_value & 0x0F) ; // mask higher nibble
-    lcdcmd(cmd_value1); // send to LCD
-    spinDelayUs(50) ;
-}
-
-void dis_data(char data_value)
-{
-    char data_value1;
-    data_value1 = ((data_value >> 4) & 0x0F) ;
-    lcddata(data_value1);
-    spinDelayUs(50) ;
-    data_value1 = (data_value & 0x0F) ;
-    lcddata(data_value1);
-    spinDelayUs(50) ;
-}
- 
-void _lcdInit(void)
-{
-    SET_LCD_RS(0); // write control bytes
-    spinDelayMs(15) ; // DelayMs(15); // power on delay
-    SET_LCD_DATA(0x3); // attention!
-    LCD_STROBE;
-    spinDelayMs(5) ; // DelayMs(5);
-    LCD_STROBE;
-    spinDelayUs(100) ; // DelayUs(100);
-    LCD_STROBE;
-    spinDelayMs(5) ; // DelayMs(5);
-    SET_LCD_DATA(0x2); // set 4 bit mode
-    LCD_STROBE;
-    spinDelayUs(40) ; // DelayUs(40);
-    // dis_cmd(0x01) ;
-    // dis_cmd(0x02) ;
-    dis_cmd(0x28); //to initialize LCD in 2 lines, 5X7 dots and 4bit mode.
-    spinDelayMs(5) ;
-    dis_cmd(0x0F);
-    spinDelayMs(5) ;
-    dis_cmd(0x06);
-    dis_cmd(0x80);
-    spinDelayMs(5) ;
-}
- 
- 
 //*****************************************************************************
 //
 //: Configure the UART and its pins.  This must be called before UARTprintf().
@@ -196,17 +97,6 @@ static void
 _setupHardware(void)
 {
     //
-    // Ports to dialog with the LCD display
-    //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-
-    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LCD_D7 | LCD_D6 | LCD_D5);
-    GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, LCD_D4 | LCD_E | LCD_RW | LCD_RS);
-
-
-
-    //
     // Enable the GPIO port that is used for the on-board LED.
     //
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
@@ -232,6 +122,7 @@ _heartbeat( void *notUsed )
 {
     uint32_t greenMs = 1000 / portTICK_RATE_MS;
     uint32_t ledOn = 0;
+    uint32_t count=0;
 
     while(1)
     {
@@ -240,11 +131,10 @@ _heartbeat( void *notUsed )
 
         LED(LED_G, ledOn);
 
-        if (ledOn)
-            dis_cmd(0x80) ;//+i) ;
-        else
-            dis_data('A') ;
+        display_set_cursor(0, 0);
+        display_character('A'+count) ;
 
+        count++;
         vTaskDelay(greenMs);
     }
 }
@@ -252,37 +142,38 @@ _heartbeat( void *notUsed )
 int main( void )
 {
     _setupHardware();
+    display_init();
 
 #ifdef USB_SERIAL_OUTPUT
 	void spinDelayMs(uint32_t ms);
 	_configureUART();
 	spinDelayMs(1000);  // Allow UART to setup
-	UARTprintf("\n\nHello from producerConsumer main()\n");
+	UARTprintf("\n\nHello from reflow main()\n");
 #endif
 
     unsigned char i = 0;
-    unsigned char str_1[12] = "ELECTRONICS" ;
-    unsigned char ch = 'T' , ch_2 = 'E', ch_3 = 'S', ch_4 = 'T' ;
+    unsigned char str_1[] = "REFLOW MANIA" ;
+    unsigned char str_2[] = "STARTUP" ;
 
-    _lcdInit();
+    display_clear();
+    display_set_cursor(0, 4);
+
 
     while(str_1[i] != '\0')
     {
-        dis_data(str_1[i]);
-        spinDelayMs(5000);
+        display_character(str_1[i]);
         i++;
     }
 
-    dis_cmd(0xC2) ;
-    spinDelayMs(5000) ;
-    dis_data(ch) ;
-    spinDelayMs(5000) ;
-    dis_data(ch_2) ;
-    spinDelayMs(5000) ;
-    dis_data(ch_3) ;
-    spinDelayMs(5000) ;
-    dis_data(ch_4) ;
-    spinDelayMs(5000) ;
+    //display_command(0xC2) ;
+    display_set_cursor(1, 5);
+    i=0;
+    
+    while(str_2[i] != '\0')
+    {
+        display_character(str_2[i]);
+        i++;
+    }
 
     xTaskCreate(_heartbeat,
                 "heartbeat",

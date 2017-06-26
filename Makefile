@@ -1,7 +1,7 @@
 
 PART=TM4C123GH6PM
 
-TARGET=autoplow
+TARGET=reflow
 
 TIVA=../TivaDriver
 FREERTOS=../FreeRTOSv9.0.0/FreeRTOS/Source
@@ -89,6 +89,7 @@ ${COMPILER}/${TARGET}.axf: ${COMPILER}/uartstdio.o
 # Rules for building the application
 #
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/main.o
+${COMPILER}/${TARGET}.axf: ${COMPILER}/display.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/assert.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/startup_${COMPILER}.o
 
