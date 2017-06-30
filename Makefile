@@ -30,7 +30,7 @@ CFLAGS += -DUSB_SERIAL_OUTPUT -DMALLOC_PROVIDED
 
 #LIBGCC += /home/miller/bin/gcc-arm-none-eabi-5_4-2016q2/arm-none-eabi/lib/armv7e-m/fpu/libnosys.a
 
-LDFLAGS += --stats -specs=nosys.specs
+LDFLAGS += --stats -Map=${COMPILER}/${TARGET}.map
 
 #
 # Where to find source files that do not live in this directory.
@@ -91,6 +91,7 @@ ${COMPILER}/${TARGET}.axf: ${COMPILER}/uartstdio.o
 # Rules for building the application
 #
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/main.o
+${COMPILER}/${TARGET}.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/display.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/assert.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/startup_${COMPILER}.o

@@ -59,13 +59,33 @@ SECTIONS
         _etext = .;        /* define a global symbols at end of code */
     } >FLASH
 
+
+    /*
+    ** C++ only
+    */
+
     .ARM.extab   : { 
         *(.ARM.extab* .gnu.linkonce.armextab.*) 
     } >FLASH
 
 
+
+    /*
+    ** used only for C++ exception handling
+    */
+    PROVIDE_HIDDEN (__exidx_start = .);
+    .ARM.exidx   : { 
+        __exidx_start = .;
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+        __exidx_end = .;
+    } >FLASH
+    PROVIDE_HIDDEN (__exidx_end = .);
+    
+
+    _begin_data = .;
+
     . = ALIGN(4);
-    .data : AT(ADDR(.text) + SIZEOF(.text))  
+    .data : AT(_begin_data)  
     {
         . = ALIGN(4);
         _data = .;
@@ -75,10 +95,6 @@ SECTIONS
         _edata = .;
     } > SRAM
 
-    
-    PROVIDE_HIDDEN (__exidx_start = .);
-    .ARM.exidx   : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
-    PROVIDE_HIDDEN (__exidx_end = .);
     
 
     . = ALIGN(4);
@@ -95,4 +111,12 @@ SECTIONS
         _ebss = .;  
         __bss_end__ = _ebss;
     } >SRAM
+
+
+    . = ALIGN(4);
+    _end = .;
+    __end = _end;
+    PROVIDE(end = .);
+
+
 }

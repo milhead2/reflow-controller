@@ -208,6 +208,12 @@ void display_clear_line(int line)
 char pbuffer[PBUFF_MAX];
 static SemaphoreHandle_t _semBuf = NULL;
 
+#if 0
+extern caddr_t _sbrk(int incr)
+{
+	return (caddr_t) 0;
+}
+#endif
 
 void
 display_printf(int line, int offset, const char *format, ...)
@@ -229,6 +235,7 @@ display_printf(int line, int offset, const char *format, ...)
 
     va_start(vaArgP, format);
     vsnprintf(pbuffer, PBUFF_MAX, format, vaArgP);
+    //sprintf(pbuffer, format);
     display_set_cursor(line, offset);
     display_string(pbuffer);
     va_end(vaArgP);
