@@ -15,7 +15,7 @@ CP=cp
 
 #
 # Echo full command lines.. Comment out for terse
-#VERBOSE=1
+VERBOSE=1
 DEBUG=1
 
 #
@@ -26,9 +26,11 @@ include makedefs
 CFLAGS += -Wno-unused-value
 #CFLAGS += -save-temps
 
-CFLAGS += -DUSB_SERIAL_OUTPUT
+CFLAGS += -DUSB_SERIAL_OUTPUT -DMALLOC_PROVIDED 
 
-LDFLAGS += --stats
+#LIBGCC += /home/miller/bin/gcc-arm-none-eabi-5_4-2016q2/arm-none-eabi/lib/armv7e-m/fpu/libnosys.a
+
+LDFLAGS += --stats -specs=nosys.specs
 
 #
 # Where to find source files that do not live in this directory.
@@ -97,6 +99,7 @@ ${COMPILER}/${TARGET}.axf: ${COMPILER}/startup_${COMPILER}.o
 # Tiva driver library
 #
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/libdriver.a
+
 
 
 #

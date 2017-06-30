@@ -14,6 +14,9 @@ void display_command(char cmd_value);
 void display_home(void);
 void display_clear(void);
 void display_set_cursor(int line, int offset);
+void display_clear_line(int line);
+void display_string(const char * s);
+
 
 #ifdef __cplusplus
 }

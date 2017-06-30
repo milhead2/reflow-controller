@@ -2,10 +2,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 /* Kernel includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 /* Tiva Hardware includes. */
 #include "inc/tm4c123gh6pm.h"
@@ -26,6 +28,7 @@
 #include "assert.h"
 #include "display.h"
 
+
 #define LCD_D7 (1<<3)  // D3
 #define LCD_D6 (1<<2)  // D2
 #define LCD_D5 (1<<1)  // D1
@@ -45,6 +48,7 @@
 #define SET_LCD_D7(x) ((x) ? (GPIO_PORTD_DATA_R |= LCD_D7) : (GPIO_PORTD_DATA_R &= ~(LCD_D7)))
 
 #define SET_LCD_EN(x) ((x) ? (GPIO_PORTE_DATA_R |= LCD_E) : (GPIO_PORTE_DATA_R &= ~(LCD_E)))
+
 
 void SET_LCD_DATA(char val)
 {
@@ -81,10 +85,10 @@ void display_command(char cmd_value)
     cmd_value1 = ((cmd_value >> 4) & 0x0F) ; //mask lower nibble because RD0-RD3 pins are used. 
     lcdcmd(cmd_value1); // send to LCD
      
-    spinDelayUs(50) ;
+    spinDelayMs(1) ;
     cmd_value1 = (cmd_value & 0x0F) ; // mask higher nibble
     lcdcmd(cmd_value1); // send to LCD
-    spinDelayUs(150) ;
+    spinDelayMs(1) ;
 }
 
 void display_character(char data_value)
@@ -92,14 +96,21 @@ void display_character(char data_value)
     char data_value1;
     data_value1 = ((data_value >> 4) & 0x0F) ;
     lcddata(data_value1);
-    spinDelayUs(50) ;
+    spinDelayMs(1) ;
     data_value1 = (data_value & 0x0F) ;
     lcddata(data_value1);
-    spinDelayUs(150) ;
+    spinDelayMs(1) ;
 }
  
 void _lcdInit(void)
 {
+    uint8_t cursor_on = 0;
+    uint8_t cursor_blink = 0;
+    uint8_t display_on = 1;
+
+    //
+    // WAKE sequence
+    //
     SET_LCD_RS(0); // write control bytes
     spinDelayMs(15) ; // DelayMs(15); // power on delay
     SET_LCD_DATA(0x3); // attention!
@@ -112,15 +123,21 @@ void _lcdInit(void)
     SET_LCD_DATA(0x2); // set 4 bit mode
     LCD_STROBE;
     spinDelayUs(40) ; // DelayUs(40);
+
+
     // dis_cmd(0x01) ;
     // dis_cmd(0x02) ;
     display_command(0x28); //to initialize LCD in 2 lines, 5X7 dots and 4bit mode.
     spinDelayMs(5) ;
-    display_command(0x0F);
+
+    // Display ON/OFF Control
+    display_command(0x08 | (display_on << 2) | (cursor_on << 1) | (cursor_blink <<0)); //0x0F);
     spinDelayMs(5) ;
+
+
     display_command(0x06);
     display_command(0x80);
-    spinDelayMs(5) ;
+    spinDelayMs(10) ;
 }
  
  
@@ -150,27 +167,76 @@ void display_init(void)
 void display_clear(void)
 {
     display_command(0x01);
-    spinDelayMs(5) ;
-    display_command(0x01);
-    spinDelayMs(5) ;
+    spinDelayMs(10) ;
 }
 
 void display_home(void)
 {
     display_command(0x02);
-    spinDelayMs(5) ;
-    display_command(0x02);
-    spinDelayMs(5) ;
+    spinDelayMs(10) ;
 }
-
-
 
 void display_set_cursor(int line, int offset)
 {
     uint8_t addr=offset;
     addr |= (line) ? 0xC0 : 0x80;
     display_command(addr);
-    spinDelayUs(200) ;
+    spinDelayMs(1) ;
+}
+
+void display_string(const char * s)
+{
+    while(*s)
+        display_character(*(s++));
+}
+
+void display_clear_line(int line)
+{
+    if (line)
+    {
+        display_set_cursor(0,0);
+        display_string("                ");
+    }
+    else
+    {    
+        display_set_cursor(1,0);
+        display_string("                ");
+    }
+}
+
+#define PBUFF_MAX 32
+char pbuffer[PBUFF_MAX];
+static SemaphoreHandle_t _semBuf = NULL;
+
+
+void
+display_printf(int line, int offset, const char *format, ...)
+{
+    va_list vaArgP;
+
+    if (_semBuf && (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING))
+    {
+        xSemaphoreTake( _semBuf, portMAX_DELAY);
+    }
+    else
+    {
+        if (! _semBuf) 
+        {
+            _semBuf = xSemaphoreCreateBinary();
+            assert(_semBuf);
+        }
+    }
+
+    va_start(vaArgP, format);
+    vsnprintf(pbuffer, PBUFF_MAX, format, vaArgP);
+    display_set_cursor(line, offset);
+    display_string(pbuffer);
+    va_end(vaArgP);
+
+    if (_semBuf && (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING))
+    {
+        xSemaphoreGive( _semBuf );
+    }
 }
 
 

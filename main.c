@@ -44,6 +44,51 @@
 uint32_t  SystemCoreClock;
 
 
+// temp-curve.h|c
+// Lead (Sn63 Pb37)
+// Preheat: to 150C in around 60s (~3C/s)
+// Soak: 150-165C in 120s
+// Reflow: peak 225-235C hold for 20 S
+// Cooling: -4C/s to room temp.
+//
+// Lead-Free (SAC305)
+// Preheat: to 150C in around 60s (~3C/s)
+// Soak: 150-180C in 120s
+// Reflow: peak 245-255C hold for 15 S
+// Cooling: -4C/s to room temp.
+
+typedef struct {
+    char * phase;
+    int max_slew;
+    int start_temp;
+    int stop_temp;
+    int seconds;
+} profile_t;
+
+#define NA 0
+
+profile_t program_lead[] = {
+    {"preheat", 3,  24, 150,  60}, 
+    {"soak",   NA, 150, 165, 120}, 
+    {"heat",   NA, 165, 230,  20}, 
+    {"reflow", NA, 230, 230,  20}, 
+    {"cool",   -4, 230,  24, 100},
+    {NULL,     NA,  NA,  NA,  NA}
+};
+
+profile_t program_leadFree[] = {
+    {"preheat", 3,  24, 150,  60}, 
+    {"soak",   NA, 150, 180, 120}, 
+    {"heat",   NA, 180, 250,  20}, 
+    {"reflow", NA, 250, 250,  20}, 
+    {"cool",   -4, 250,  24, 100},
+    {NULL,     NA,  NA,  NA,  NA}
+};
+
+
+
+
+
 #ifdef USB_SERIAL_OUTPUT
 
 #ifdef DEBUG
@@ -131,8 +176,26 @@ _heartbeat( void *notUsed )
 
         LED(LED_G, ledOn);
 
+        if (ledOn)
+        {
+            display_clear_line(0);
+            display_set_cursor(0,4);
+            display_string("Hola");
+        }
+        else
+        {
+            display_clear_line(1);
+            display_set_cursor(1,7);
+            display_string("Batman!");
+        }
+
         display_set_cursor(0, 0);
         display_character('A'+count) ;
+
+        TickType_t ms = xTaskGetTickCountFromISR();
+        uint32_t min = ms/(1000*60);
+        uint32_t sec = ms % 1000;
+        display_printf(1, 0, "%03d", sec);
 
         count++;
         vTaskDelay(greenMs);
