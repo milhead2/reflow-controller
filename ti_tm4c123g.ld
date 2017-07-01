@@ -56,7 +56,6 @@ SECTIONS
         KEEP (*(.fini))
 
         . = ALIGN(4);
-        _etext = .;        /* define a global symbols at end of code */
     } >FLASH
 
 
@@ -80,6 +79,8 @@ SECTIONS
         __exidx_end = .;
     } >FLASH
     PROVIDE_HIDDEN (__exidx_end = .);
+
+    _etext = .;        /* define a global symbols at end of code */
     
 
     _begin_data = .;

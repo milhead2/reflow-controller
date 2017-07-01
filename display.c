@@ -215,8 +215,7 @@ extern caddr_t _sbrk(int incr)
 }
 #endif
 
-void
-display_printf(int line, int offset, const char *format, ...)
+void display_printf(int line, int offset, const char *format, ...)
 {
     va_list vaArgP;
 
@@ -229,6 +228,7 @@ display_printf(int line, int offset, const char *format, ...)
         if (! _semBuf) 
         {
             _semBuf = xSemaphoreCreateBinary();
+            xSemaphoreGive( _semBuf );
             assert(_semBuf);
         }
     }

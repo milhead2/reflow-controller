@@ -16,6 +16,7 @@ void display_clear(void);
 void display_set_cursor(int line, int offset);
 void display_clear_line(int line);
 void display_string(const char * s);
+void display_printf(int line, int offset, const char *format, ...);
 
 
 #ifdef __cplusplus

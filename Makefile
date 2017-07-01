@@ -93,6 +93,7 @@ ${COMPILER}/${TARGET}.axf: ${COMPILER}/uartstdio.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/main.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/syscalls.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/display.o
+${COMPILER}/${TARGET}.axf: ${COMPILER}/profile.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/assert.o
 ${COMPILER}/${TARGET}.axf: ${COMPILER}/startup_${COMPILER}.o
 
